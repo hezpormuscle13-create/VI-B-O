@@ -7,15 +7,32 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+
+      - name: Find project folder
+        id: find
+        run: |
+          F=$(find . -name settings.gradle.kts -not -path "./.git/*" | head -n 1)
+          if [ -z "$F" ]; then
+            echo "settings.gradle.kts not found. Files in repo:"
+            ls -R | head -60
+            exit 1
+          fi
+          echo "dir=$(dirname "$F")" >> "$GITHUB_OUTPUT"
+
       - uses: actions/setup-java@v4
         with:
           distribution: temurin
           java-version: 17
+
       - uses: gradle/actions/setup-gradle@v4
         with:
           gradle-version: 8.7
-      - run: gradle assembleDebug
+
+      - name: Build
+        working-directory: ${{ steps.find.outputs.dir }}
+        run: gradle assembleDebug --stacktrace
+
       - uses: actions/upload-artifact@v4
         with:
           name: OtgMapper-debug
-          path: app/build/outputs/apk/debug/*.apk
+          path: ${{ steps.find.outputs.dir }}/app/build/outputs/apk/debug/*.apk
