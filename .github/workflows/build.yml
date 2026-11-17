@@ -8,15 +8,25 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - name: Find project folder
+      - name: Find or unzip project
         id: find
         run: |
           F=$(find . -name settings.gradle.kts -not -path "./.git/*" | head -n 1)
+          if [ -z "$F" ]; then
+            Z=$(find . -name "*.zip" -not -path "./.git/*" | head -n 1)
+            if [ -n "$Z" ]; then
+              echo "Found zip: $Z -> extracting"
+              mkdir -p "$RUNNER_TEMP/proj"
+              unzip -q -o "$Z" -d "$RUNNER_TEMP/proj"
+              F=$(find "$RUNNER_TEMP/proj" -name settings.gradle.kts | head -n 1)
+            fi
+          fi
           if [ -z "$F" ]; then
             echo "settings.gradle.kts not found. Files in repo:"
             ls -R | head -60
             exit 1
           fi
+          echo "Project dir: $(dirname "$F")"
           echo "dir=$(dirname "$F")" >> "$GITHUB_OUTPUT"
 
       - uses: actions/setup-java@v4
